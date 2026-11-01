@@ -104,3 +104,50 @@ body {
   background-image: radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
                     radial-gradient(circle at 75% 75%, rgba(30, 58, 138, 0.08) 0%, transparent 50%);
 }
+/* Home page hero background */
+.home-hero {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    #0b1437 0%,
+    #172554 45%,
+    #1e3a8a 100%
+  );
+  color: #ffffff;
+  min-height: 620px;
+}
+
+/* Make sure hero content stays above background decorations */
+.home-hero > div {
+  position: relative;
+  z-index: 2;
+}
+
+/* Hero heading */
+.home-hero h1 {
+  color: #ffffff;
+}
+
+/* Highlighted heading */
+.home-hero h1 span {
+  color: #7dd3fc;
+}
+
+/* Hero description */
+.home-hero p {
+  color: #e2e8f0;
+}
+
+/* Hero information */
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    #0b1437 0%,
+    #172554 45%,
+    #1e3a8a 100%
+  );
+  color: #ffffff;
+  min-height: auto;
+}

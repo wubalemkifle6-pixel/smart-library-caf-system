@@ -61,12 +61,12 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700 text-white hero-pattern">
+     <section className="home-hero relative overflow-hidden text-white">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute right-0 top-0 w-96 h-96 bg-navy-400 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
           <div className="absolute left-0 bottom-0 w-96 h-96 bg-sky-400 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+<div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm mb-6">
               <Star size={14} className="text-amber-400" />
@@ -112,7 +112,7 @@ export default function HomePage() {
 
       {/* Stats Bar */}
       <section className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-6 grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-navy-700">10K+</div>
             <div className="text-sm text-slate-500 mt-1">Books in Collection</div>
