@@ -42,7 +42,7 @@ export default function MemberDashboard() {
         description="Your reading journey at a glance."
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+     <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
         <StatCard title="Currently Borrowed" value={stats.currentlyBorrowed} icon={BookMarked} color="navy" />
         <StatCard title="Pending Requests" value={stats.pendingRequests} icon={Clock} color="amber" />
         <StatCard title="Active Reservations" value={stats.activeReservations} icon={Star} color="purple" />

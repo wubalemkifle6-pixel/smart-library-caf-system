@@ -252,7 +252,7 @@ export default function CashierPOSPage() {
 
           {/* Cart */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-20">
+             <Card className="lg:sticky lg:top-20">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                   <ShoppingBag size={18} /> Current Order

@@ -80,7 +80,7 @@ export default function HomePage() {
               Where stories meet brew. Borrow, read, study, and savor exceptional coffee
               in a thoughtfully designed space for book lovers, students, and thinkers.
             </p>
-            <form onSubmit={handleSearch} className="mt-8 flex gap-2 max-w-xl">
+            <form onSubmit={handleSearch} className="mt-8 flex flex-col sm:flex-row gap-2 max-w-xl">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input
@@ -91,7 +91,7 @@ export default function HomePage() {
                   className="w-full pl-12 pr-4 py-4 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-navy-400/30 text-base"
                 />
               </div>
-              <Button size="lg" type="submit" className="bg-amber-500 hover:bg-amber-600 text-navy-900 font-semibold">
+            <Button size="lg" type="submit" className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-navy-900 font-semibold">
                 Search
               </Button>
             </form>
@@ -358,7 +358,7 @@ export default function HomePage() {
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Card className="bg-gradient-to-r from-navy-700 to-navy-900 text-white overflow-hidden">
-          <CardBody className="p-10 lg:p-14 text-center">
+          <CardBody className="p-6 sm:p-10 lg:p-14 text-center">
             <h2 className="text-3xl font-bold font-['Playfair_Display']">Ready to start reading?</h2>
             <p className="mt-4 text-slate-200 max-w-xl mx-auto">
               Join our community of book lovers today. Membership is free and gives you access to thousands of books,

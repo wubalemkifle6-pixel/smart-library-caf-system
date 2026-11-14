@@ -86,7 +86,7 @@ export default function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-400">
           <p>&copy; {new Date().getFullYear()} Smart Library & Book Café. All rights reserved.</p>
-          <div className="flex gap-6">
+           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <a href="#" className="hover:text-white">Privacy Policy</a>
             <a href="#" className="hover:text-white">Terms of Service</a>
             <a href="#" className="hover:text-white">Help Center</a>

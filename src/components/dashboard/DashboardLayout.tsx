@@ -160,7 +160,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
             <div className="text-white/70 text-xs leading-tight">& Café</div>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          <nav className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-0.5">
           {config.nav.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -238,7 +238,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
                 )}
               </button>
               {showNotif && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
+                <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
                   <div className="p-3 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="font-semibold text-sm">Notifications</h4>
                     {unreadCount > 0 && (
@@ -276,7 +276,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6 overflow-x-hidden">{children}</main>
+         <main className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

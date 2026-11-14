@@ -35,7 +35,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2",
+       "inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 max-sm:min-h-[42px]",
         variants[variant],
         sizes[size],
         className
@@ -52,9 +52,9 @@ export function Button({
 // ============ Card ============
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div
+   <div
       className={cn(
-        "bg-white rounded-xl border border-slate-200 shadow-sm",
+        "bg-white rounded-xl border border-slate-200 shadow-sm min-w-0",
         className
       )}
     >
@@ -222,7 +222,7 @@ export function Modal({
   if (!open) return null;
   const sizes = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
       <div className={cn("w-full bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto", sizes[size])}>
         {title && (
           <div className="flex items-center justify-between p-5 border-b border-slate-100">
@@ -269,7 +269,7 @@ export function ToastContainer() {
     info: "bg-sky-50 border-sky-200 text-sky-800",
   };
   return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full">
+    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-sm">
       {toasts.map((t) => {
         const Icon = icons[t.type];
         return (
@@ -322,10 +322,10 @@ export function StatCard({
   return (
     <Card className="card-hover">
       <CardBody>
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-sm font-medium text-slate-500">{title}</p>
-            <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+            <p className="mt-1 text-2xl sm:text-3xl font-bold text-slate-900 break-words">{value}</p>
             {trend && (
               <p className={cn(
                 "mt-1 text-xs font-medium",
@@ -336,7 +336,7 @@ export function StatCard({
             )}
           </div>
           {Icon && (
-            <div className={cn("p-3 rounded-xl", colorMap[color])}>
+            <div className={cn("p-2.5 sm:p-3 rounded-xl shrink-0", colorMap[color])}>
               <Icon size={24} />
             </div>
           )}
@@ -358,9 +358,9 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 mb-6">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 break-words">{title}</h1>
         {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}

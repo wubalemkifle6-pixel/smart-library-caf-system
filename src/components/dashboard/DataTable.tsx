@@ -117,7 +117,7 @@ export function DataTable<T extends { id: number }>({
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   {columns.map(c => (

@@ -63,8 +63,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Card>
-            <CardBody className="p-8">
+          
+             <Card>
+            <CardBody className="p-6 sm:p-8">
 
               <h1 className="text-2xl font-bold text-slate-900">
                 Welcome back
