@@ -121,6 +121,18 @@ input[type="checkbox"] {
 .book-cover {
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
 }
+@keyframes drawerIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-drawer-in {
+  animation: drawerIn 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-drawer-in {
+    animation: none;
+  }
+}
 
 /* Hero pattern */
 .hero-pattern {

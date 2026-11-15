@@ -12,21 +12,17 @@ import {
 import { useAuth } from "@/components/Providers";
 import { cn, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui";
-import Image from "next/image";
-
 interface NavItem {
   href: string;
   label: string;
   icon: any;
   badge?: number | string;
 }
-
 interface DashboardConfig {
   title: string;
   brandColor: string;
   nav: NavItem[];
 }
-
 const dashboardConfigs: Record<string, DashboardConfig> = {
   admin: {
     title: "Admin Dashboard",
@@ -109,7 +105,6 @@ const dashboardConfigs: Record<string, DashboardConfig> = {
     ],
   },
 };
-
 export default function DashboardLayout({ children, role }: { children: React.ReactNode; role: string }) {
   const config = dashboardConfigs[role];
   const pathname = usePathname();
@@ -119,7 +114,6 @@ export default function DashboardLayout({ children, role }: { children: React.Re
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
-
   useEffect(() => {
     if (user) {
       fetch("/api/notifications?unread=true&pageSize=5")
@@ -133,102 +127,147 @@ export default function DashboardLayout({ children, role }: { children: React.Re
         .catch(() => {});
     }
   }, [user]);
-
+  // Close drawer & notification panel whenever the route changes (incl. back button)
+  useEffect(() => {
+    setSidebarOpen(false);
+    setShowNotif(false);
+  }, [pathname]);
+  // While the mobile drawer is open: lock background scrolling + close on Escape
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sidebarOpen]);
   if (!config) return <div>Invalid role</div>;
-
   const markAllRead = async () => {
     await fetch("/api/notifications/all/read", { method: "POST" });
     setUnreadCount(0);
     setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
   };
-
+  // Shared sidebar content — identical links, icons, and role config
+  // for the desktop sidebar and the mobile drawer.
+  const renderSidebarInner = (withCloseButton: boolean) => (
+    <>
+      <div className={cn("h-16 shrink-0 bg-gradient-to-r flex items-center px-5 gap-2.5", config.brandColor)}>
+        <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+          <BookOpen className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <div className="font-bold text-white text-sm leading-tight">Smart Library</div>
+          <div className="text-white/70 text-xs leading-tight">& Café</div>
+        </div>
+        {withCloseButton && (
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-white/80 hover:bg-white/10 active:bg-white/20"
+          >
+            <X size={20} />
+          </button>
+        )}
+      </div>
+      <nav className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-0.5">
+        {config.nav.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 max-sm:py-3 rounded-lg text-sm font-medium transition-colors group",
+                active
+                  ? "bg-navy-50 text-navy-800"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-navy-800"
+              )}
+            >
+              <Icon size={18} className={cn("flex-shrink-0", active ? "text-navy-700" : "text-slate-400 group-hover:text-navy-600")} />
+              <span className="flex-1">{item.label}</span>
+              {item.badge ? (
+                <Badge variant="danger">{item.badge}</Badge>
+              ) : active ? <ChevronRight size={14} className="text-navy-600" /> : null}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="p-3 border-t border-slate-200 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <button
+          onClick={() => {
+            setSidebarOpen(false);
+            logout();
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 max-sm:py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
+      </div>
+    </>
+  );
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col transform transition-transform lg:translate-x-0 lg:relative",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className={cn("h-16 bg-gradient-to-r flex items-center px-5 gap-2.5", config.brandColor)}>
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="font-bold text-white text-sm leading-tight">Smart Library</div>
-            <div className="text-white/70 text-xs leading-tight">& Café</div>
-          </div>
-        </div>
-          <nav className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-0.5">
-          {config.nav.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group",
-                  active
-                    ? "bg-navy-50 text-navy-800"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-navy-800"
-                )}
-              >
-                <Icon size={18} className={cn("flex-shrink-0", active ? "text-navy-700" : "text-slate-400 group-hover:text-navy-600")} />
-                <span className="flex-1">{item.label}</span>
-                {item.badge ? (
-                  <Badge variant="danger">{item.badge}</Badge>
-                ) : active ? <ChevronRight size={14} className="text-navy-600" /> : null}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="p-3 border-t border-slate-200">
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </div>
+      {/* Desktop sidebar — unchanged appearance, in normal flow */}
+      <aside className="hidden lg:flex relative w-64 shrink-0 bg-white border-r border-slate-200 flex-col">
+        {renderSidebarInner(false)}
       </aside>
-
+      {/* Mobile navigation drawer — mounted only while open, so its final
+          position never depends on a transform being applied/composited. */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-20 bg-slate-900/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="lg:hidden" role="dialog" aria-modal="true" aria-label="Dashboard navigation">
+          <div
+            data-testid="drawer-backdrop"
+            className="fixed inset-0 z-[60] bg-slate-900/50 animate-fade-in"
+            aria-hidden="true"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <aside
+            data-testid="mobile-drawer"
+            className="fixed inset-y-0 left-0 z-[70] w-72 max-w-[85vw] bg-white shadow-2xl flex flex-col animate-drawer-in"
+          >
+            {renderSidebarInner(true)}
+          </aside>
+        </div>
       )}
-
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 sticky top-0 z-10">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-slate-100"
+              type="button"
+              aria-label="Open navigation menu"
+              aria-expanded={sidebarOpen}
+              onClick={() => {
+                setShowNotif(false);
+                setSidebarOpen(true);
+              }}
+              className="lg:hidden relative z-[45] -ml-1 min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center"
             >
-              <Menu size={20} />
+              <Menu size={22} />
             </button>
             <div className="hidden sm:block">
               <h2 className="font-semibold text-slate-900 text-base">{config.title}</h2>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                placeholder="Search..."
-                className="pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-navy-500 focus:outline-none text-sm w-64"
-              />
-            </div>
-
             <div className="relative">
               <button
-                onClick={() => setShowNotif(!showNotif)}
-                className="relative p-2 rounded-lg hover:bg-slate-100"
+                aria-label="Notifications"
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setShowNotif(!showNotif);
+                }}
+                className="relative z-[45] p-2 rounded-lg hover:bg-slate-100"
               >
                 <Bell size={20} className="text-slate-600" />
                 {unreadCount > 0 && (
@@ -238,11 +277,18 @@ export default function DashboardLayout({ children, role }: { children: React.Re
                 )}
               </button>
               {showNotif && (
+                <div
+                  className="fixed inset-0 z-40"
+                  aria-hidden="true"
+                  onClick={() => setShowNotif(false)}
+                />
+              )}
+              {showNotif && (
                 <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
                   <div className="p-3 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="font-semibold text-sm">Notifications</h4>
                     {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-xs text-navy-600 hover:underline">
+                      <button onClick={markAllRead} className="text-xs text-navy-600 hover:underline px-2 py-1.5">
                         Mark all read
                       </button>
                     )}
@@ -263,7 +309,6 @@ export default function DashboardLayout({ children, role }: { children: React.Re
                 </div>
               )}
             </div>
-
             <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-slate-900 leading-tight">{user?.fullName}</p>
@@ -275,8 +320,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
             </div>
           </div>
         </header>
-
-         <main className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 overflow-x-hidden">{children}</main>
+        <main className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
