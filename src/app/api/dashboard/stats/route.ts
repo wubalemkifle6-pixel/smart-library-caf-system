@@ -116,16 +116,14 @@ export async function GET() {
       // Borrowings by category
       const borrowsByCategory = await db
         .select({
-          categoryName: sql<string>`coalesce(${sql.raw('"bc"."name"')}, 'Uncategorized')`,
+          categoryname: sql<string>`coalesce((select name from book_categories bc where bc.id = ${books.categoryId}), 'Uncategorized')`,
           count: count(borrowings.id),
         })
         .from(borrowings)
         .innerJoin(books, eq(borrowings.bookId, books.id))
-        .leftJoin(
-          sql.raw(`"book_categories" AS "bc"`),
-          eq(books.categoryId, sql.raw('"bc"."id"'))
-        )
-        .groupBy(sql.raw('"bc"."name"'));
+        .groupBy(
+          sql`coalesce((select name from book_categories bc where bc.id = ${books.categoryId}), 'Uncategorized')`
+        );
 
       return NextResponse.json({
         success: true,

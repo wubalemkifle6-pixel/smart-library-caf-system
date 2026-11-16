@@ -6,7 +6,7 @@ import {
   cafeProducts,
   users,
 } from "@/db/schema";
-import { eq, desc, and, count, ilike, or, inArray } from "drizzle-orm";
+import { eq, desc, and, count, sum, ilike, or, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import type { Role, OrderStatus } from "@/types";

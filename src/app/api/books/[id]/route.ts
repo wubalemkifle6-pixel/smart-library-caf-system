@@ -88,6 +88,10 @@ export async function PUT(
             : body[field];
       }
     }
+    if (body.isbn !== undefined) {
+      updateData.isbn =
+        body.isbn && String(body.isbn).trim() ? String(body.isbn).trim() : null;
+    }
     if (body.categoryId !== undefined) {
       updateData.categoryId = body.categoryId
         ? Number(body.categoryId)

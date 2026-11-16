@@ -21,6 +21,19 @@ const borrowSchema = z.object({
 export async function GET(req: Request) {
   try {
     const currentUser = await requireAuth();
+
+    // Reconcile overdue loans so every role sees accurate status,
+    // regardless of whether the admin dashboard has been opened.
+    await db
+      .update(borrowings)
+      .set({ status: "overdue", updatedAt: new Date() })
+      .where(
+        and(
+          eq(borrowings.status, "borrowed"),
+          sql`${borrowings.dueDate} IS NOT NULL AND ${borrowings.dueDate} < NOW()`
+        )
+      );
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "20");

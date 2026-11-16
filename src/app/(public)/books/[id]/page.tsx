@@ -182,9 +182,11 @@ export default function BookDetailPage() {
               </Button>
             )}
             {book.price && (
-              <Button size="lg" variant="outline">
-                <ShoppingCart size={18} /> Purchase
-              </Button>
+              <Link href={`/contact?subject=${encodeURIComponent(`Purchase inquiry: ${book.title}`)}`}>
+                <Button size="lg" variant="outline">
+                  <ShoppingCart size={18} /> Purchase at Counter
+                </Button>
+              </Link>
             )}
           </div>
         </div>

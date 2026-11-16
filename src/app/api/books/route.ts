@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { books, bookCategories } from "@/db/schema";
-import { eq, like, or, and, desc, sql, count } from "drizzle-orm";
+import { eq, ilike, or, and, desc, sql, count } from "drizzle-orm";
 import { z } from "zod";
 import { getAuthUser, requireAuth } from "@/lib/auth";
-import { ensureSeeded } from "@/lib/seed";
 import type { Role } from "@/types";
 
 const bookSchema = z.object({
@@ -25,7 +24,6 @@ const bookSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    await ensureSeeded();
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "20");
@@ -38,9 +36,9 @@ export async function GET(req: Request) {
     if (search) {
       conditions.push(
         or(
-          like(books.title, `%${search}%`),
-          like(books.author, `%${search}%`),
-          like(books.isbn || "", `%${search}%`)
+          ilike(books.title, `%${search}%`),
+          ilike(books.author, `%${search}%`),
+          ilike(books.isbn || "", `%${search}%`)
         )
       );
     }
@@ -133,6 +131,7 @@ export async function POST(req: Request) {
       .insert(books)
       .values({
         ...data,
+        isbn: data.isbn && data.isbn.trim() ? data.isbn.trim() : null,
         availableQuantity: availableQty,
         price: data.price ? String(data.price) : null,
       })
@@ -150,8 +149,17 @@ export async function POST(req: Request) {
       );
     }
     console.error("Create book error:", error);
+    const code =
+      (error as { cause?: { code?: string } })?.cause?.code ??
+      (error as { code?: string })?.code;
     return NextResponse.json(
-      { success: false, error: (error as Error).message },
+      {
+        success: false,
+        error:
+          code === "23505"
+            ? "A book with this ISBN already exists in the catalog."
+            : (error as Error).message,
+      },
       { status: 400 }
     );
   }

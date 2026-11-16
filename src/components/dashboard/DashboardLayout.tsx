@@ -12,17 +12,22 @@ import {
 import { useAuth } from "@/components/Providers";
 import { cn, formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui";
+import { AutoReveal, PageTransition } from "@/components/motion/AutoReveal";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
+
 interface NavItem {
   href: string;
   label: string;
   icon: any;
   badge?: number | string;
 }
+
 interface DashboardConfig {
   title: string;
   brandColor: string;
   nav: NavItem[];
 }
+
 const dashboardConfigs: Record<string, DashboardConfig> = {
   admin: {
     title: "Admin Dashboard",
@@ -105,6 +110,7 @@ const dashboardConfigs: Record<string, DashboardConfig> = {
     ],
   },
 };
+
 export default function DashboardLayout({ children, role }: { children: React.ReactNode; role: string }) {
   const config = dashboardConfigs[role];
   const pathname = usePathname();
@@ -114,6 +120,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
+
   useEffect(() => {
     if (user) {
       fetch("/api/notifications?unread=true&pageSize=5")
@@ -127,11 +134,13 @@ export default function DashboardLayout({ children, role }: { children: React.Re
         .catch(() => {});
     }
   }, [user]);
+
   // Close drawer & notification panel whenever the route changes (incl. back button)
   useEffect(() => {
     setSidebarOpen(false);
     setShowNotif(false);
   }, [pathname]);
+
   // While the mobile drawer is open: lock background scrolling + close on Escape
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -146,12 +155,15 @@ export default function DashboardLayout({ children, role }: { children: React.Re
       window.removeEventListener("keydown", onKey);
     };
   }, [sidebarOpen]);
+
   if (!config) return <div>Invalid role</div>;
+
   const markAllRead = async () => {
     await fetch("/api/notifications/all/read", { method: "POST" });
     setUnreadCount(0);
     setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
   };
+
   // Shared sidebar content — identical links, icons, and role config
   // for the desktop sidebar and the mobile drawer.
   const renderSidebarInner = (withCloseButton: boolean) => (
@@ -214,12 +226,14 @@ export default function DashboardLayout({ children, role }: { children: React.Re
       </div>
     </>
   );
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Desktop sidebar — unchanged appearance, in normal flow */}
       <aside className="hidden lg:flex relative w-64 shrink-0 bg-white border-r border-slate-200 flex-col">
         {renderSidebarInner(false)}
       </aside>
+
       {/* Mobile navigation drawer — mounted only while open, so its final
           position never depends on a transform being applied/composited. */}
       {sidebarOpen && (
@@ -238,6 +252,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
           </aside>
         </div>
       )}
+
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
@@ -259,7 +274,9 @@ export default function DashboardLayout({ children, role }: { children: React.Re
               <h2 className="font-semibold text-slate-900 text-base">{config.title}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <ThemeToggle />
             <div className="relative">
               <button
                 aria-label="Notifications"
@@ -284,7 +301,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
                 />
               )}
               {showNotif && (
-                <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
+                <div className="fixed left-4 right-4 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-pop">
                   <div className="p-3 border-b border-slate-100 flex items-center justify-between">
                     <h4 className="font-semibold text-sm">Notifications</h4>
                     {unreadCount > 0 && (
@@ -309,6 +326,7 @@ export default function DashboardLayout({ children, role }: { children: React.Re
                 </div>
               )}
             </div>
+
             <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-slate-900 leading-tight">{user?.fullName}</p>
@@ -320,7 +338,11 @@ export default function DashboardLayout({ children, role }: { children: React.Re
             </div>
           </div>
         </header>
-        <main className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 overflow-x-hidden">{children}</main>
+
+        <main className="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
+          <PageTransition>{children}</PageTransition>
+          <AutoReveal />
+        </main>
       </div>
     </div>
   );

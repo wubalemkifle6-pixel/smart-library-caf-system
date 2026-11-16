@@ -6,6 +6,7 @@ import { BookOpen, Coffee, Menu, X, User, LogOut, LayoutDashboard } from "lucide
 import { useAuth } from "./Providers";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui";
+import { ThemeToggle } from "./theme/ThemeProvider";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -78,6 +79,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
             {loading ? (
               <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
             ) : user ? (
@@ -120,12 +122,16 @@ export default function Navbar() {
             )}
           </div>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-slate-100"
-          >
-            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex md:hidden items-center gap-1">
+            <ThemeToggle />
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100"
+            >
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -138,7 +144,7 @@ export default function Navbar() {
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "block px-3 py-2 rounded-lg text-sm font-medium",
+                  "block px-3 py-3 rounded-lg text-sm font-medium",
                   pathname === link.href
                     ? "bg-navy-50 text-navy-800"
                     : "text-slate-600 hover:bg-slate-100"

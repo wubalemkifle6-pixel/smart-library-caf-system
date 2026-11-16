@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
             <div className="text-xs text-slate-500 flex items-center gap-1"><Coffee size={10} /> Book Café</div>
           </div>
         </div>
-           <Card>
+        <Card>
           <CardBody className="p-6 sm:p-8">
             <Link href="/login" className="inline-flex items-center gap-1 text-sm text-navy-700 hover:underline mb-4">
               <ArrowLeft size={14} /> Back to login

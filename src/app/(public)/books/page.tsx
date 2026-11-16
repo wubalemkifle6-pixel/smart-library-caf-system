@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Search, BookOpen, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardBody, Button, Input, Select, Badge, EmptyState, LoadingSpinner } from "@/components/ui";
@@ -36,12 +36,14 @@ export default function BooksPage() {
   const [total, setTotal] = useState(0);
   const pageSize = 12;
 
-  const loadBooks = () => {
+  const initialized = useRef(false);
+
+  const loadBooks = (searchOverride?: string) => {
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page),
       pageSize: String(pageSize),
-      search,
+      search: searchOverride ?? search,
     });
     if (categoryId) params.set("categoryId", categoryId);
     if (availability) params.set("availability", availability);
@@ -66,7 +68,18 @@ export default function BooksPage() {
   }, []);
 
   useEffect(() => {
-    loadBooks();
+    // Honor ?search= from the home page hero search on first load
+    let override: string | undefined;
+    if (!initialized.current) {
+      initialized.current = true;
+      const q = new URLSearchParams(window.location.search).get("search");
+      if (q) {
+        setSearch(q);
+        override = q;
+      }
+    }
+    loadBooks(override);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, categoryId, availability]);
 
   const handleSearch = (e: React.FormEvent) => {

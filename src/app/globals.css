@@ -30,21 +30,9 @@
 
 html,
 body {
-  overflow-x: clip;
-  -webkit-tap-highlight-color: transparent;
-}
-img,
-video {
-  max-width: 100%;
-}
-svg {
-  flex-shrink: 0;
-}
-button,
-a,
-select,
-input[type="checkbox"] {
-  touch-action: manipulation;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 /* Custom scrollbar */
@@ -75,22 +63,11 @@ input[type="checkbox"] {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px -5px rgba(23, 37, 84, 0.1), 0 8px 10px -6px rgba(23, 37, 84, 0.1);
 }
-@media (max-width: 640px) {
-  input,
-  select,
-  textarea {
-    font-size: 16px !important;
-  }
-}
-
 
 /* Animation keyframes */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
-}
-.overflow-x-auto {
-  -webkit-overflow-scrolling: touch;
 }
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
@@ -102,6 +79,22 @@ input[type="checkbox"] {
 }
 .animate-slide-in {
   animation: slideIn 0.3s ease-out;
+}
+
+/* Mobile nav drawer entrance. The drawer's resting position is its natural
+   layout position (no transform), so even if a WebView skips the animation,
+   the menu is still fully visible after tapping the hamburger. */
+@keyframes drawerIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-drawer-in {
+  animation: drawerIn 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-drawer-in {
+    animation: none;
+  }
 }
 
 /* Loading spinner */
@@ -121,68 +114,233 @@ input[type="checkbox"] {
 .book-cover {
   background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
 }
-@keyframes drawerIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-.animate-drawer-in {
-  animation: drawerIn 0.22s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-drawer-in {
-    animation: none;
-  }
-}
 
 /* Hero pattern */
 .hero-pattern {
   background-image: radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
                     radial-gradient(circle at 75% 75%, rgba(30, 58, 138, 0.08) 0%, transparent 50%);
 }
-/* Home page hero background */
-.home-hero {
-  position: relative;
-  background: linear-gradient(
-    135deg,
-    #0b1437 0%,
-    #172554 45%,
-    #1e3a8a 100%
-  );
-  color: #ffffff;
-  min-height: 620px;
+
+/* ===== Mobile / Android responsiveness guards ===== */
+/* Prevent accidental page-wide horizontal scroll; inner scroll containers
+   (tables, tab strips) keep their own overflow-x: auto behavior. */
+html,
+body {
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Make sure hero content stays above background decorations */
-.home-hero > div {
-  position: relative;
-  z-index: 2;
+/* Media never exceeds its container */
+img,
+video {
+  max-width: 100%;
 }
 
-/* Hero heading */
-.home-hero h1 {
-  color: #ffffff;
+/* Icons keep their size inside flex rows on narrow screens */
+svg {
+  flex-shrink: 0;
 }
 
-/* Highlighted heading */
-.home-hero h1 span {
-  color: #7dd3fc;
+/* Faster taps, no double-tap zoom delay on controls */
+button,
+a,
+select,
+input[type="checkbox"] {
+  touch-action: manipulation;
 }
 
-/* Hero description */
-.home-hero p {
-  color: #e2e8f0;
+/* Android Chrome zooms the page when focusing inputs < 16px.
+   Keep 16px form controls on phones only; desktop typography unchanged. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
-/* Hero information */
-.home-hero {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    #0b1437 0%,
-    #172554 45%,
-    #1e3a8a 100%
-  );
-  color: #ffffff;
-  min-height: auto;
+/* Smooth momentum scrolling for intentional horizontal scrollers */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Finger-sized tap targets for table row actions & stock steppers on phones.
+   Scoped to table cells so desktop density is untouched. */
+@media (max-width: 640px) {
+  td button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* ===== Professional motion system ===== */
+/* Page entrance: short fade + upward slide, GPU-friendly (opacity/transform). */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-page-in {
+  animation: pageIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Dropdowns & modals: subtle pop from the top edge. */
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-pop {
+  animation: popIn 0.18s ease-out;
+  transform-origin: top center;
+}
+
+/* Scroll-reveal (driven by the shared AutoReveal IntersectionObserver).
+   Only opacity/transform animate — no layout shift. The delay variable is
+   set per card for grid staggering and reset to 0 on exit. */
+.reveal {
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal:not(.is-in) {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+/* ===== Theme toggle icon crossfade ===== */
+.theme-icon {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+}
+.theme-icon-sun { opacity: 1; transform: rotate(0deg) scale(1); }
+.theme-icon-moon { opacity: 0; transform: rotate(90deg) scale(0.5); }
+.dark .theme-icon-sun { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+.dark .theme-icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+/* ============================================================
+   PREMIUM DARK THEME — deep navy/charcoal, never pure black.
+   Tailwind v4 emits colors as CSS variables, so remapping the
+   neutral scale + soft accent tints rethemes every dashboard
+   component centrally. Class-level overrides handle tokens that
+   serve dual roles (e.g. bg-white cards vs text-white on heroes).
+   Brand navy gradients, hero sections, and the footer stay rich
+   navy in both themes by design.
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+  /* Neutral scale (slate-200/300/400 keep values: used as light text on heroes) */
+  --color-slate-50: #0b1120;
+  --color-slate-100: #1b2740;
+  --color-slate-500: #93a3c4;
+  --color-slate-600: #b7c3dd;
+  --color-slate-700: #d5ddef;
+  --color-slate-800: #e8edf9;
+  --color-slate-900: #f4f7fd;
+  --color-slate-950: #ffffff;
+  /* Soft accent tints (badge/icon-well/alert backgrounds) */
+  --color-emerald-50: #0a231c;
+  --color-emerald-100: #0e2f25;
+  --color-amber-50: #2a2008;
+  --color-amber-100: #33270d;
+  --color-red-50: #2a1215;
+  --color-red-100: #391a1e;
+  --color-sky-50: #0a2233;
+  --color-sky-100: #0e2c42;
+  --color-purple-100: #251b3d;
+  --color-rose-100: #351626;
+  /* Focus ring offset matches surfaces */
+  --tw-ring-offset-color: #131c31;
+}
+.dark body { background-color: #0b1120; color: #f4f7fd; }
+
+/* Surfaces: cards, navbar, inputs (text-white stays white on heroes) */
+.dark .bg-white { background-color: #131c31; }
+.dark .bg-white\/90 { background-color: rgb(19 28 49 / 0.9); }
+.dark .focus\:bg-white:focus { background-color: #131c31; }
+
+/* Overlays stay dark (slate-900 var is light text now) */
+.dark .bg-slate-900\/50 { background-color: rgb(4 8 20 / 0.66); }
+
+/* Borders & dividers that must stay subtle in dark */
+.dark .border-slate-200 { border-color: #263452; }
+.dark .border-slate-300 { border-color: #33436a; }
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #263452; }
+.dark .bg-slate-200 { background-color: #263452; }
+.dark .hover\:bg-slate-200:hover { background-color: #223052; }
+
+/* Navy text & soft navy wells (solid navy buttons/gradients unchanged) */
+.dark .text-navy-900 { color: #eef3fe; }
+.dark .text-navy-800 { color: #d9e4fb; }
+.dark .text-navy-700 { color: #8fb3ff; }
+.dark .text-navy-600 { color: #7fa8f8; }
+.dark .text-navy-500 { color: #93a9d6; }
+.dark .hover\:text-navy-800:hover { color: #d9e4fb; }
+.dark .hover\:text-navy-700:hover { color: #8fb3ff; }
+.dark .group:hover .group-hover\:text-navy-600 { color: #7fa8f8; }
+.dark .bg-navy-50 { background-color: #1a2947; }
+.dark .bg-navy-50\/40 { background-color: rgb(26 41 71 / 0.4); }
+.dark .bg-navy-50\/50 { background-color: rgb(26 41 71 / 0.5); }
+.dark .bg-navy-100 { background-color: #21335a; }
+.dark .hover\:bg-navy-50:hover { background-color: #1a2947; }
+.dark .hover\:bg-navy-200:hover { background-color: #2a3f6e; }
+.dark .focus\:ring-navy-100:focus { --tw-ring-color: #2a3f6e; }
+
+/* Accent text: readable bright tones on dark soft wells */
+.dark .text-emerald-600, .dark .text-emerald-700 { color: #34d399; }
+.dark .text-emerald-800 { color: #6ee7b7; }
+.dark .text-amber-600, .dark .text-amber-700 { color: #fbbf24; }
+.dark .text-amber-800 { color: #fcd34d; }
+.dark .text-red-600, .dark .text-red-700 { color: #f87171; }
+.dark .hover\:text-red-600:hover { color: #f87171; }
+.dark .text-red-800 { color: #fca5a5; }
+.dark .text-sky-700 { color: #38bdf8; }
+.dark .text-sky-800 { color: #7dd3fc; }
+.dark .text-purple-700 { color: #c4b5fd; }
+.dark .text-rose-700 { color: #fda4af; }
+
+/* Alert/toast borders & hover wells for accents */
+.dark .border-emerald-200 { border-color: #14532d; }
+.dark .border-red-200 { border-color: #582226; }
+.dark .border-amber-200 { border-color: #57430f; }
+.dark .border-sky-200 { border-color: #164e63; }
+.dark .hover\:bg-emerald-200:hover { background-color: #14503c; }
+.dark .hover\:bg-red-200:hover { background-color: #4c2226; }
+.dark .hover\:bg-amber-200:hover { background-color: #453512; }
+
+/* Café product icon-well gradients (amber → orange) */
+.dark .from-amber-200 { --tw-gradient-from: #3a2d10 var(--tw-gradient-from-position); }
+.dark .to-orange-200 { --tw-gradient-to: #3a2410 var(--tw-gradient-to-position); }
+.dark .to-orange-300 { --tw-gradient-to: #4a2e12 var(--tw-gradient-to-position); }
+
+/* Charts: grid, ticks, tooltips, legend readable on dark cards */
+.dark .recharts-cartesian-grid line { stroke: #263452; }
+.dark .recharts-cartesian-axis-tick text { fill: #93a3c4; }
+.dark .recharts-default-tooltip {
+  background-color: #1b2740 !important;
+  border-color: #33436a !important;
+}
+.dark .recharts-tooltip-label { color: #e8edf9 !important; }
+.dark .recharts-legend-item-text { color: #b7c3dd !important; }
+
+/* Scrollbar & spinner tuned for dark */
+.dark ::-webkit-scrollbar-track { background: #0e1628; }
+.dark ::-webkit-scrollbar-thumb { background: #33436a; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #43568a; }
+.dark .spinner { border-color: rgba(96, 165, 250, 0.2); border-top-color: #60a5fa; }
+
+/* Accessibility: honor reduced-motion everywhere. Content is never hidden
+   and all animation collapses to an imperceptible duration. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal:not(.is-in) {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -68,8 +68,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        
-         <Card>
+        <Card>
           <CardBody className="p-6 sm:p-8">
             {submitted ? (
               <div className="text-center py-6">

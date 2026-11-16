@@ -53,6 +53,16 @@ export default function DashboardRootLayout({ children }: { children: React.Reac
     );
   }
 
+  // /dashboard index (redirect page) has no role segment yet
+  if (!urlRole) {
+    return (
+      <>
+        {children}
+        <ToastContainer />
+      </>
+    );
+  }
+
   return (
     <>
       <DashboardLayout role={normalizedRole}>{children}</DashboardLayout>
