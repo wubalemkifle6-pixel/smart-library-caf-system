@@ -3,6 +3,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
+// CORS headers for the SQL Analysis dashboard
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+// Handle browser preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function GET() {
   try {
     const [
@@ -112,19 +127,24 @@ export async function GET() {
       `),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        overview: overview.rows[0],
-        bookCategories: bookCategories.rows,
-        borrowingStatuses: borrowingStatuses.rows,
-        topBooks: topBooks.rows,
-        monthlyBorrowings: monthlyBorrowings.rows,
-        cafeSales: cafeSales.rows[0],
-        topCafeProducts: topCafeProducts.rows,
-        fineAnalytics: fineAnalytics.rows[0],
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          overview: overview.rows[0],
+          bookCategories: bookCategories.rows,
+          borrowingStatuses: borrowingStatuses.rows,
+          topBooks: topBooks.rows,
+          monthlyBorrowings: monthlyBorrowings.rows,
+          cafeSales: cafeSales.rows[0],
+          topCafeProducts: topCafeProducts.rows,
+          fineAnalytics: fineAnalytics.rows[0],
+        },
       },
-    });
+      {
+        headers: corsHeaders,
+      }
+    );
   } catch (error) {
     console.error("Analytics API error:", error);
 
@@ -133,7 +153,10 @@ export async function GET() {
         success: false,
         message: "Failed to load analytics data",
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: corsHeaders,
+      }
     );
   }
 }
