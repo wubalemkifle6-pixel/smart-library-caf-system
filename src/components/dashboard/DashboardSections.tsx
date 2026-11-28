@@ -597,44 +597,170 @@ export function CategoriesSection({ type }: { type: "book" | "cafe" }) {
     </div>
   );
 }
-
+//
 // ============================================================================
 // 4. BORROWINGS / ISSUE / RETURNS / OVERDUE / MEMBER BORROWED & HISTORY
 // ============================================================================
 export function BorrowingsSection({ mode, role }: { mode: string; role: string }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const isStaff = role === "admin" || role === "librarian";
-
-  const statusFilter =
-    mode === "overdue" ? "overdue" :
-    mode === "returns" || mode === "history" ? "returned" :
-    mode === "borrowed" ? "borrowed" :
-    mode === "issue" ? "approved" : "";
-
-  const handleAction = async (row: any, action: "approve" | "reject" | "issue" | "return" | "cancel") => {
-    const res = await fetch(`/api/borrowings/${row.id}/${action}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    }).then((r) => r.json());
-    if (res.success) {
-      showToast(res.message || "Updated", "success");
-      setRefreshKey((k) => k + 1);
-    } else {
-      showToast(res.error || "Action failed", "error");
+  const getDefaultTab = (m: string, staff: boolean) => {
+    if (!staff) {
+      if (m === "history") return "returned";
+      return "";
+    }
+    if (m === "issue") return "approved";
+    if (m === "returns") return "active_borrowed";
+    if (m === "overdue") return "overdue";
+    return "";
+  };
+  const [activeTab, setActiveTab] = useState<string>(() => getDefaultTab(mode, isStaff));
+  const [summary, setSummary] = useState({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    borrowed: 0,
+    overdue: 0,
+    activeBorrowed: 0,
+    returned: 0,
+    rejected: 0,
+  });
+  // Confirmation modal state
+  const [modalAction, setModalAction] = useState<{
+    row: any;
+    action: "approve" | "reject" | "issue" | "return" | "cancel";
+  } | null>(null);
+  const [actionNotes, setActionNotes] = useState("");
+  const [customDueDate, setCustomDueDate] = useState("");
+  const [submittingAction, setSubmittingAction] = useState(false);
+  useEffect(() => {
+    setActiveTab(getDefaultTab(mode, isStaff));
+  }, [mode, isStaff]);
+  useEffect(() => {
+    fetch("/api/borrowings?pageSize=1")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data?.summary) {
+          setSummary(res.data.summary);
+        }
+      })
+      .catch(() => {});
+  }, [refreshKey]);
+  const openConfirmModal = (
+    row: any,
+    action: "approve" | "reject" | "issue" | "return" | "cancel"
+  ) => {
+    if (
+      (action === "approve" || action === "issue") &&
+      row.bookAvailableQuantity !== undefined &&
+      Number(row.bookAvailableQuantity) < 1
+    ) {
+      showToast(
+        `Cannot ${action} — "${row.bookTitle}" currently has 0 available copies in stock.`,
+        "error"
+      );
+      return;
+    }
+    setActionNotes("");
+    const defaultDue = new Date();
+    defaultDue.setDate(defaultDue.getDate() + 14);
+    setCustomDueDate(defaultDue.toISOString().split("T")[0]);
+    setModalAction({ row, action });
+  };
+  const executeConfirmedAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalAction) return;
+    const { row, action } = modalAction;
+    setSubmittingAction(true);
+    try {
+      const payload: Record<string, unknown> = {};
+      if (action === "reject") {
+        payload.reason = actionNotes.trim() || "Rejected by librarian";
+      } else if (actionNotes.trim()) {
+        payload.notes = actionNotes.trim();
+      }
+      if (action === "issue" && customDueDate) {
+        const parsed = new Date(customDueDate + "T23:59:59");
+        if (!isNaN(parsed.getTime())) {
+          payload.dueDate = parsed.toISOString();
+        }
+      }
+      const res = await fetch(`/api/borrowings/${row.id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json());
+      if (res.success) {
+        showToast(res.message || "Updated successfully", "success");
+        setModalAction(null);
+        setRefreshKey((k) => k + 1);
+      } else {
+        showToast(res.error || "Action failed", "error");
+      }
+    } catch {
+      showToast("Something went wrong while processing the request", "error");
+    } finally {
+      setSubmittingAction(false);
     }
   };
-
+  const getEstimatedFine = (dueDateStr: string | null) => {
+    if (!dueDateStr) return { daysLate: 0, fine: 0 };
+    const due = new Date(dueDateStr);
+    const now = new Date();
+    if (now <= due) return { daysLate: 0, fine: 0 };
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysLate = Math.max(0, Math.floor((now.getTime() - due.getTime()) / msPerDay));
+    const fine = Math.round(daysLate * 0.5 * 100) / 100;
+    return { daysLate, fine };
+  };
+  const staffTabs = [
+    { key: "", label: "All Records", count: summary.all },
+    { key: "pending", label: "Pending Requests", count: summary.pending },
+    { key: "approved", label: "Approved (Ready to Issue)", count: summary.approved },
+    { key: "active_borrowed", label: "Currently Borrowed", count: summary.activeBorrowed },
+    { key: "overdue", label: "Overdue Books", count: summary.overdue },
+    { key: "returned", label: "Returned Books", count: summary.returned },
+    { key: "rejected", label: "Rejected", count: summary.rejected },
+  ];
+  const memberTabs = [
+    { key: "", label: "All My Requests & Books", count: summary.all },
+    { key: "pending", label: "Pending Approval", count: summary.pending },
+    { key: "approved", label: "Approved for Pickup", count: summary.approved },
+    { key: "active_borrowed", label: "Currently Borrowed", count: summary.activeBorrowed },
+    { key: "returned", label: "Returned History", count: summary.returned },
+  ];
+  const tabsToRender = isStaff ? staffTabs : memberTabs;
   const columns: ColumnDef<any>[] = [
     {
       key: "bookTitle",
-      label: "Book",
-      render: (b) => (
-        <div>
-          <div className="font-medium text-slate-900">{b.bookTitle}</div>
-          <div className="text-xs text-slate-500">{b.bookAuthor}</div>
-        </div>
-      ),
+      label: "Book & Availability",
+      render: (b) => {
+        const avail = b.bookAvailableQuantity ?? 1;
+        const total = b.bookTotalQuantity ?? 1;
+        return (
+          <div className="flex items-start sm:justify-start justify-end gap-3">
+            <div className="w-9 h-12 rounded bg-navy-800 overflow-hidden flex-shrink-0 hidden xs:block">
+              {b.bookCover && (
+                <img src={b.bookCover} alt="" className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="text-left min-w-0">
+              <div className="font-medium text-slate-900 break-words">{b.bookTitle}</div>
+              <div className="text-xs text-slate-500">{b.bookAuthor}</div>
+              {isStaff && (
+                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                  <Badge variant={avail > 0 ? "success" : "danger"}>
+                    {avail > 0 ? `${avail} of ${total} available` : `Unavailable (0 of ${total})`}
+                  </Badge>
+                  {b.bookShelfLocation && (
+                    <span className="text-[11px] text-slate-400">Shelf: {b.bookShelfLocation}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     ...(isStaff
       ? [
@@ -643,80 +769,505 @@ export function BorrowingsSection({ mode, role }: { mode: string; role: string }
             label: "Member",
             render: (b: any) => (
               <div>
-                <div className="font-medium text-slate-900 text-sm">{b.userName}</div>
-                <div className="text-xs text-slate-500">{b.userEmail}</div>
+                <div className="font-medium text-slate-900 text-sm break-words">{b.userName}</div>
+                <div className="text-xs text-slate-500 break-all">{b.userEmail}</div>
               </div>
             ),
           },
         ]
       : []),
-    { key: "status", label: "Status", render: (b) => <StatusBadge status={b.status} /> },
+    {
+      key: "status",
+      label: "Borrowing Status",
+      render: (b) => (
+        <div className="space-y-1">
+          <StatusBadge status={b.status} />
+          {b.notes && (
+            <div className="text-[11px] text-slate-500 max-w-[180px] truncate" title={b.notes}>
+              Note: {b.notes}
+            </div>
+          )}
+        </div>
+      ),
+    },
     {
       key: "dates",
-      label: "Timeline",
+      label: "Dates Timeline",
       render: (b) => (
         <div className="text-xs space-y-0.5">
-          <div>Requested: {formatDate(b.requestDate)}</div>
-          {b.dueDate && <div className="font-medium text-navy-700">Due: {formatDate(b.dueDate)}</div>}
-          {b.returnedDate && <div className="text-emerald-600">Returned: {formatDate(b.returnedDate)}</div>}
+          <div className="text-slate-500">Requested: {formatDate(b.requestDate)}</div>
+          {b.approvedDate && b.status === "approved" && (
+            <div className="text-sky-700 font-medium">Approved: {formatDate(b.approvedDate)}</div>
+          )}
+          {b.borrowedDate && (
+            <div className="text-slate-700">Borrowed: {formatDate(b.borrowedDate)}</div>
+          )}
+          {b.dueDate && b.status !== "rejected" && (
+            <div className="font-semibold text-navy-700">
+              Due Date: {formatDate(b.dueDate)}
+            </div>
+          )}
+          {b.returnedDate && (
+            <div className="text-emerald-600 font-medium">
+              Returned: {formatDate(b.returnedDate)}
+            </div>
+          )}
         </div>
       ),
     },
   ];
-
   const titles: Record<string, { title: string; desc: string }> = {
-    borrowings: { title: "Borrowing Requests", desc: "Review, approve, issue, and manage book borrowings" },
-    issue: { title: "Issue Books", desc: "Issue approved or pending borrowing requests to members" },
-    returns: { title: "Returns Management", desc: "Process returned books and view return records" },
-    overdue: { title: "Overdue Books", desc: "Track overdue books and calculate late return fines" },
-    borrowed: { title: "My Borrowed Books", desc: "View your active borrowings, requests, and due dates" },
-    history: { title: "Borrowing History", desc: "Complete record of your past borrowed books" },
+    borrowings: {
+      title: "Borrowing Approval & Management",
+      desc: "Review member borrowing requests, approve or reject pending requests, issue books, and process book returns",
+    },
+    issue: {
+      title: "Book Issuing Management",
+      desc: "Confirm physical book handover to members for approved borrowing requests and record borrowing & due dates",
+    },
+    returns: {
+      title: "Book Return Management",
+      desc: "Process returns for currently borrowed books, restore book availability, and view returned books history",
+    },
+    overdue: {
+      title: "Overdue Books Management",
+      desc: "Track overdue borrowings, process late book returns, and automatically calculate overdue fines",
+    },
+    borrowed: {
+      title: "My Borrowed Books",
+      desc: "View your active borrowings, pending requests, approved pickups, and due dates",
+    },
+    history: {
+      title: "Borrowing History",
+      desc: "Complete record of your returned and past borrowed books",
+    },
   };
   const info = titles[mode] || titles.borrowings;
-
+  const endpointUrl = activeTab
+    ? `/api/borrowings?status=${encodeURIComponent(activeTab)}`
+    : "/api/borrowings";
   return (
     <div>
       <PageHeader title={info.title} description={info.desc} />
+      {/* Quick Summary Cards for Staff */}
+      {isStaff && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-5">
+          <button type="button" onClick={() => setActiveTab("pending")} className="text-left w-full">
+            <Card className="card-hover cursor-pointer h-full">
+              <CardBody className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Pending Requests</p>
+                  <p className="text-2xl font-bold text-amber-600 mt-0.5">{summary.pending}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Awaiting approval</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700">
+                  <Clock size={20} />
+                </div>
+              </CardBody>
+            </Card>
+          </button>
+          <button type="button" onClick={() => setActiveTab("approved")} className="text-left w-full">
+            <Card className="card-hover cursor-pointer h-full">
+              <CardBody className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Approved Requests</p>
+                  <p className="text-2xl font-bold text-sky-600 mt-0.5">{summary.approved}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Ready to issue</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-sky-100 text-sky-700">
+                  <CheckCircle size={20} />
+                </div>
+              </CardBody>
+            </Card>
+          </button>
+          <button type="button" onClick={() => setActiveTab("active_borrowed")} className="text-left w-full">
+            <Card className="card-hover cursor-pointer h-full">
+              <CardBody className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Currently Borrowed</p>
+                  <p className="text-2xl font-bold text-navy-700 mt-0.5">{summary.activeBorrowed}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {summary.overdue > 0 ? `${summary.overdue} overdue` : "Issued to members"}
+                  </p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-navy-100 text-navy-700">
+                  <BookMarked size={20} />
+                </div>
+              </CardBody>
+            </Card>
+          </button>
+          <button type="button" onClick={() => setActiveTab("returned")} className="text-left w-full">
+            <Card className="card-hover cursor-pointer h-full">
+              <CardBody className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Returned Books</p>
+                  <p className="text-2xl font-bold text-emerald-600 mt-0.5">{summary.returned}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Completed returns</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
+                  <RotateCcw size={20} />
+                </div>
+              </CardBody>
+            </Card>
+          </button>
+        </div>
+      )}
+      {/* Section Tabs */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        {tabsToRender.map((tab) => {
+          const isSelected = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key || "all"}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                isSelected
+                  ? "bg-navy-700 text-white shadow-sm"
+                  : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                  isSelected
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
       <DataTable
-        title={info.title}
-        endpoint={statusFilter ? `/api/borrowings?status=${statusFilter}` : "/api/borrowings"}
+        title={
+          tabsToRender.find((t) => t.key === activeTab)?.label || info.title
+        }
+        endpoint={endpointUrl}
         columns={columns}
-        searchPlaceholder="Search by book title or member..."
+        searchPlaceholder="Search by book title, author, or member name..."
         refreshKey={refreshKey}
-        actions={(b: any) => (
-          <div className="inline-flex gap-1">
-            {isStaff && b.status === "pending" && (
-              <>
-                <Button size="sm" variant="success" onClick={() => handleAction(b, "approve")}>
-                  <Check size={14} /> Approve
+        actions={(b: any) => {
+          const isUnavailable =
+            b.bookAvailableQuantity !== undefined &&
+            Number(b.bookAvailableQuantity) < 1;
+          return (
+            <div className="inline-flex items-center gap-1.5 flex-wrap">
+              {/* 1. PENDING REQUEST ACTIONS: Approve / Reject */}
+              {isStaff && b.status === "pending" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="success"
+                    disabled={isUnavailable}
+                    title={
+                      isUnavailable
+                        ? "Book is currently out of stock (0 copies available)"
+                        : "Approve borrowing request"
+                    }
+                    onClick={() => openConfirmModal(b, "approve")}
+                  >
+                    <Check size={14} />{" "}
+                    {isUnavailable ? "Unavailable" : "Approve"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => openConfirmModal(b, "reject")}
+                  >
+                    <X size={14} /> Reject
+                  </Button>
+                </>
+              )}
+              {/* 2. APPROVED REQUEST ACTIONS: Issue Book (Physical Handover) */}
+              {isStaff && b.status === "approved" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={isUnavailable}
+                    title={
+                      isUnavailable
+                        ? "No copies available in stock to issue"
+                        : "Confirm physical book issuance to member"
+                    }
+                    onClick={() => openConfirmModal(b, "issue")}
+                  >
+                    <BookMarked size={14} />{" "}
+                    {isUnavailable ? "Out of Stock" : "Issue Book"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openConfirmModal(b, "reject")}
+                  >
+                    <X size={14} /> Cancel Approval
+                  </Button>
+                </>
+              )}
+              {/* 3. CURRENTLY BORROWED / OVERDUE ACTIONS: Return Book */}
+              {isStaff && (b.status === "borrowed" || b.status === "overdue") && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => openConfirmModal(b, "return")}
+                >
+                  <RotateCcw size={14} /> Return Book
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => handleAction(b, "reject")}>
-                  <X size={14} /> Reject
+              )}
+              {/* 4. MEMBER CANCEL PENDING REQUEST */}
+              {!isStaff && b.status === "pending" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openConfirmModal(b, "cancel")}
+                >
+                  Cancel Request
                 </Button>
-              </>
+              )}
+              {/* Read-only completed states */}
+              {b.status === "returned" && (
+                <span className="text-xs text-emerald-600 font-medium px-2 py-1">
+                  ✓ Returned
+                </span>
+              )}
+              {b.status === "rejected" && (
+                <span className="text-xs text-slate-400 font-medium px-2 py-1">
+                  Closed
+                </span>
+              )}
+            </div>
+          );
+        }}
+      />
+      {/* CONFIRMATION MODAL FOR APPROVE / REJECT / ISSUE / RETURN / CANCEL */}
+      <Modal
+        open={!!modalAction}
+        onClose={() => !submittingAction && setModalAction(null)}
+        title={
+          modalAction?.action === "approve"
+            ? "Confirm Borrowing Request Approval"
+            : modalAction?.action === "reject"
+            ? "Reject Borrowing Request"
+            : modalAction?.action === "issue"
+            ? "Confirm Physical Book Issuance"
+            : modalAction?.action === "return"
+            ? "Confirm Book Return"
+            : "Cancel Borrowing Request"
+        }
+      >
+        {modalAction && (
+          <form onSubmit={executeConfirmedAction} className="space-y-4 text-sm">
+            {/* Summary Card of the Borrowing Record */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Book Title:</span>
+                <span className="font-semibold text-slate-900 text-right">
+                  {modalAction.row.bookTitle}
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Member:</span>
+                <span className="font-medium text-slate-800 text-right">
+                  {modalAction.row.userName} ({modalAction.row.userEmail})
+                </span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Request Date:</span>
+                <span className="text-slate-700">
+                  {formatDate(modalAction.row.requestDate)}
+                </span>
+              </div>
+              {modalAction.row.borrowedDate && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Borrowing Date:</span>
+                  <span className="text-slate-700">
+                    {formatDate(modalAction.row.borrowedDate)}
+                  </span>
+                </div>
+              )}
+              {modalAction.row.dueDate && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Expected Return (Due Date):</span>
+                  <span className="font-semibold text-navy-700">
+                    {formatDate(modalAction.row.dueDate)}
+                  </span>
+                </div>
+              )}
+              {isStaff && modalAction.row.bookAvailableQuantity !== undefined && (
+                <div className="flex justify-between items-center gap-2 pt-1 border-t border-slate-200">
+                  <span className="text-slate-500">Current Stock Availability:</span>
+                  <Badge
+                    variant={
+                      Number(modalAction.row.bookAvailableQuantity) > 0
+                        ? "success"
+                        : "danger"
+                    }
+                  >
+                    {modalAction.row.bookAvailableQuantity} of{" "}
+                    {modalAction.row.bookTotalQuantity} available
+                  </Badge>
+                </div>
+              )}
+            </div>
+            {/* Action-specific details */}
+            {modalAction.action === "approve" && (
+              <div className="space-y-3">
+                <p className="text-slate-600 text-xs sm:text-sm">
+                  Approving this request will notify{" "}
+                  <span className="font-semibold text-slate-900">
+                    {modalAction.row.userName}
+                  </span>{" "}
+                  that their request has been approved for pickup. Once the member arrives at the desk, use{" "}
+                  <span className="font-semibold">Issue Book</span> to record physical handover.
+                </p>
+                <Input
+                  label="Approval Note (optional)"
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="e.g. Reserved at front desk for 48 hours"
+                />
+              </div>
             )}
-            {isStaff && (b.status === "approved" || b.status === "pending") && (
-              <Button size="sm" variant="primary" onClick={() => handleAction(b, "issue")}>
-                <BookMarked size={14} /> Issue
-              </Button>
+            {modalAction.action === "reject" && (
+              <div className="space-y-3">
+                <Textarea
+                  label="Reason for Rejection *"
+                  required
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="Provide a clear reason for rejecting this request..."
+                  rows={3}
+                />
+              </div>
             )}
-            {isStaff && (b.status === "borrowed" || b.status === "overdue") && (
-              <Button size="sm" variant="secondary" onClick={() => handleAction(b, "return")}>
-                <RotateCcw size={14} /> Return
-              </Button>
+            {modalAction.action === "issue" && (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-xs space-y-1">
+                  <p className="font-semibold">Physical Book Handover Confirmation</p>
+                  <p>
+                    • Actual Borrowing Date:{" "}
+                    <span className="font-semibold">
+                      {formatDate(new Date())} (Today)
+                    </span>
+                  </p>
+                  <p>
+                    • Available Copies will be updated from{" "}
+                    <span className="font-semibold">
+                      {modalAction.row.bookAvailableQuantity}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-semibold">
+                      {Math.max(0, Number(modalAction.row.bookAvailableQuantity) - 1)}
+                    </span>
+                    .
+                  </p>
+                </div>
+                <Input
+                  label="Expected Return Date (Due Date) *"
+                  type="date"
+                  required
+                  value={customDueDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setCustomDueDate(e.target.value)}
+                />
+                <Input
+                  label="Issuance Notes (optional)"
+                  value={actionNotes}
+                  onChange={(e) => setActionNotes(e.target.value)}
+                  placeholder="e.g. Book condition: Excellent"
+                />
+              </div>
             )}
-            {!isStaff && b.status === "pending" && (
-              <Button size="sm" variant="outline" onClick={() => handleAction(b, "cancel")}>
+            {modalAction.action === "return" && (() => {
+              const { daysLate, fine } = getEstimatedFine(modalAction.row.dueDate);
+              return (
+                <div className="space-y-3">
+                  <div
+                    className={`p-3 rounded-lg border text-xs space-y-1 ${
+                      fine > 0
+                        ? "bg-amber-50 border-amber-200 text-amber-900"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    }`}
+                  >
+                    <p className="font-semibold">
+                      {fine > 0
+                        ? `Overdue Return (${daysLate} day${daysLate === 1 ? "" : "s"} past due date)`
+                        : "On-Time Book Return"}
+                    </p>
+                    <p>
+                      • Actual Return Date:{" "}
+                      <span className="font-semibold">{formatDate(new Date())}</span>
+                    </p>
+                    <p>
+                      • Book copy will be returned to available library stock.
+                    </p>
+                    {fine > 0 && (
+                      <p className="font-bold text-red-600 pt-1">
+                        • Overdue Fine to be Issued: {formatCurrency(fine)} ($0.50/day)
+                      </p>
+                    )}
+                  </div>
+                  <Input
+                    label="Return Condition / Notes (optional)"
+                    value={actionNotes}
+                    onChange={(e) => setActionNotes(e.target.value)}
+                    placeholder="e.g. Returned in good condition"
+                  />
+                </div>
+              );
+            })()}
+            {modalAction.action === "cancel" && (
+              <p className="text-slate-600">
+                Are you sure you want to cancel your pending borrowing request for{" "}
+                <span className="font-semibold text-slate-900">
+                  "{modalAction.row.bookTitle}"
+                </span>
+                ?
+              </p>
+            )}
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                disabled={submittingAction}
+                onClick={() => setModalAction(null)}
+              >
                 Cancel
               </Button>
-            )}
-          </div>
+              <Button
+                type="submit"
+                variant={
+                  modalAction.action === "reject" || modalAction.action === "cancel"
+                    ? "danger"
+                    : modalAction.action === "approve"
+                    ? "success"
+                    : "primary"
+                }
+                className="w-full sm:w-auto"
+                loading={submittingAction}
+              >
+                {modalAction.action === "approve"
+                  ? "Confirm Approval"
+                  : modalAction.action === "reject"
+                  ? "Confirm Rejection"
+                  : modalAction.action === "issue"
+                  ? "Confirm & Issue Book"
+                  : modalAction.action === "return"
+                  ? "Confirm Book Return"
+                  : "Cancel Request"}
+              </Button>
+            </div>
+          </form>
         )}
-      />
+      </Modal>
     </div>
   );
 }
-
 // ============================================================================
 // 5. MEMBER RECORDS (for Librarian)
 // ============================================================================

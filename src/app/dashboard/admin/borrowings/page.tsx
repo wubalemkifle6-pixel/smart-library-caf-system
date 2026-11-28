@@ -4,6 +4,7 @@ import { DataTable, type ColumnDef } from "@/components/dashboard/DataTable";
 import { PageHeader, showToast, StatusBadge, Button } from "@/components/ui";
 import { Check, X, RotateCcw, BookMarked } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { BorrowingsSection } from "@/components/dashboard/DashboardSections";
 
 interface BorrowRow {
   id: number;
@@ -20,7 +21,7 @@ interface BorrowRow {
 
 export default function AdminBorrowingsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
-
+return <BorrowingsSection mode="borrowings" role="admin" />;
   const handleAction = async (row: BorrowRow, action: "approve" | "reject" | "issue" | "return" | "cancel") => {
     try {
       const res = await fetch(`/api/borrowings/${row.id}/${action}`, {

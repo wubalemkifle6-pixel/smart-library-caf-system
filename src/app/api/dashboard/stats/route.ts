@@ -149,7 +149,17 @@ export async function GET() {
       });
     }
 
-    if (currentUser.role === "librarian") {
+     if (currentUser.role === "librarian") {
+      // Auto-mark overdue borrowings
+      await db
+        .update(borrowings)
+        .set({ status: "overdue", updatedAt: new Date() })
+        .where(
+          and(
+            eq(borrowings.status, "borrowed"),
+            sql`${borrowings.dueDate} IS NOT NULL AND ${borrowings.dueDate} < NOW()`
+          )
+        );
       const [totalBooks] = await db.select({ total: count() }).from(books);
       const availResult = await db
         .select({ total: sum(books.availableQuantity) })
@@ -158,6 +168,10 @@ export async function GET() {
         .select({ total: count() })
         .from(borrowings)
         .where(eq(borrowings.status, "pending"));
+      const [approvedBorrows] = await db
+        .select({ total: count() })
+        .from(borrowings)
+        .where(eq(borrowings.status, "approved"));
       const [activeBorrows] = await db
         .select({ total: count() })
         .from(borrowings)
@@ -168,6 +182,10 @@ export async function GET() {
         .select({ total: count() })
         .from(borrowings)
         .where(eq(borrowings.status, "overdue"));
+      const [returnedBorrows] = await db
+        .select({ total: count() })
+        .from(borrowings)
+        .where(eq(borrowings.status, "returned"));
       const [totalMembers] = await db
         .select({ total: count() })
         .from(users)
@@ -187,21 +205,21 @@ export async function GET() {
         .innerJoin(users, eq(borrowings.userId, users.id))
         .orderBy(desc(borrowings.createdAt))
         .limit(5);
-
       return NextResponse.json({
         success: true,
         data: {
           totalBooks: totalBooks.total,
           availableBooks: availResult[0]?.total || 0,
           pendingRequests: pendingBorrows.total,
+          approvedRequests: approvedBorrows.total,
           activeBorrowings: activeBorrows.total,
           overdueBooks: overdueBorrows.total,
+          returnedBooks: returnedBorrows.total,
           totalMembers: totalMembers.total,
           recentBorrows,
         },
       });
     }
-
     if (currentUser.role === "member") {
       const [myBorrowed] = await db
         .select({ total: count() })

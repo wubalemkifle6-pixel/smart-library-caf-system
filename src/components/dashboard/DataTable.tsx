@@ -99,7 +99,11 @@ export function DataTable<T extends { id: number }>({
             <select
               key={f.key}
               value={filterValues[f.key] || ""}
-              onChange={e => { setFilterValues(prev => ({ ...prev, [f.key]: e.target.value })); setPage(1); }}
+              onChange={e => {
+  const v = e.target.value;
+  setFilterValues(prev => ({ ...prev, [f.key]: v }));
+  setPage(1);
+}}
               className="px-3 py-2 rounded-lg border border-slate-300 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-100 text-sm bg-white"
             >
               <option value="">{f.label}</option>

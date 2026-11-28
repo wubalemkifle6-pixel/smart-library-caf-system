@@ -7,7 +7,7 @@ import {
   fines,
   notifications,
 } from "@/db/schema";
-import { eq, desc, and, count, sql, or } from "drizzle-orm";
+import { eq, desc, and, count, sql, or, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import type { Role, BorrowingStatus } from "@/types";
@@ -45,7 +45,10 @@ export async function GET(req: Request) {
     if (currentUser.role === "member") {
       conditions.push(eq(borrowings.userId, currentUser.id));
     }
-    if (status) {
+    if (status === "active") {
+      // Convenience filter: currently held loans (borrowed + overdue).
+      conditions.push(inArray(borrowings.status, ["borrowed", "overdue"]));
+    } else if (status) {
       conditions.push(eq(borrowings.status, status as BorrowingStatus));
     }
     if (search) {
@@ -74,6 +77,11 @@ export async function GET(req: Request) {
         bookTitle: books.title,
         bookAuthor: books.author,
         bookCover: books.coverImage,
+        bookAvailable: books.availableQuantity,
+        bookTotal: books.totalQuantity,
+        reservationCount: sql<number>`(select count(*)::int from reservations r where r.book_id = ${books.id} and r.status = 'active')`,
+        fineAmount: sql<string | null>`(select coalesce(sum(f.amount), 0) from fines f where f.borrowing_id = ${borrowings.id})`,
+        fineStatus: sql<string | null>`(select f.status from fines f where f.borrowing_id = ${borrowings.id} order by f.issued_date desc limit 1)`,
         userName: users.fullName,
         userEmail: users.email,
       })

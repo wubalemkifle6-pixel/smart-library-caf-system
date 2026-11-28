@@ -26,8 +26,9 @@ export default function HomePage() {
   const [popularBooks, setPopularBooks] = useState<Book[]>([]);
 
   useEffect(() => {
-    fetch("/api/books?pageSize=4")
-      .then((r) => r.json())
+     fetch("/api/books?pageSize=4&availability=available")
+
+  .then((r) => r.json())
       .then((res) => {
         if (res.success) setFeaturedBooks(res.data.items);
       });
